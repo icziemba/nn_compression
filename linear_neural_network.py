@@ -47,3 +47,25 @@ class LinearNeuralNetwork(nn.Module):
         for model in self.models:
             biases.append(model.bias)
         return biases
+
+    def max_weight(self):
+        weights = self.weights()
+
+        max_value = weights[0].max()
+        for i in range(1, len(weights)):
+            next_value = weights[1].max()
+            if next_value > max_value:
+                max_values = next_value
+
+        return max_value.item()
+
+    def max_bias(self):
+        biases = self.biases()
+
+        max_value = biases[0].max()
+        for i in range(1, len(biases)):
+            next_value = biases[1].max()
+            if next_value > max_value:
+                max_values = next_value
+
+        return max_value.item()

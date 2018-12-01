@@ -89,13 +89,15 @@ if __name__ == "__main__":
                                               batch_size=batch_size, 
                                               shuffle=False)
 
+    teacher_seed = 123456
+
     # Train the teacher model
     if os.path.isfile(teacher_save):
         print("Loading teacher model: " + teacher_save)
         teacher = torch.load(teacher_save)
     else:
         print("Training teacher model...")
-        teacher = cnn.ConvNeuralNetwork().to(device)
+        teacher = cnn.ConvNeuralNetwork(seed=teacher_seed).to(device)
         train(teacher, train_loader, device)
         torch.save(teacher, teacher_save)
         print("Saving teacher model: " + teacher_save)
@@ -105,46 +107,57 @@ if __name__ == "__main__":
     print("Teacher accuracy: {}".format(teacher_accuracy))
 
 
-    student_seed = 123456
+    student_seed = teacher_seed
 
     # Run student models with different architectures and hyperparameters
     hidden_layers = [1, 2]
     hidden_units = [10, 20, 30, 40, 50]
-    alphas = [0.0, 0.2, 0.4, 0.6, 0.8, 1]
+    alphas = [0.0, 0.25, 0.5, 0.75, 1]
     temps = [1.0, 2.0, 3.0, 4.0, 5.0]
     epochs = [5, 10]
-    learning_rates = [0.001]
+    learning_rates = [0.001, 0.01]
 
-    # TODO: Write results to file
-    results = "student_results.csv"
+    results_filename = "student_results.csv"
+    with open(results_filename, mode="w") as results_fd:
+        results_csv = csv.writer(results_fd, delimiter=',')
+        results_csv.writerow(["Model Name", "Layers", "Units", "Alphas", "Temps", "Epochs", "Learning Rates", "Accuracy", "Max Weight", "Max Bias"])
 
-    for layer in hidden_layers:
-        for unit in hidden_units:
-            for alpha in alphas:
-                for temp in temps:
-                    for epoch in epochs:
-                        for lr in learning_rates:
-                            student_save = "student_layers_{}_units_{}_alpha_{}_temp_{}".format(layer, unit, alpha, temp)
-                            
-                            if os.path.isfile(student_save):
-                                print("Loading student model: " + student_save)
-                                student = torch.load(student_save)
-                            else:
-                                print("Training student model: " + student_save)
-                                
-                                arch = []
-                                arch.append(28*28)
-                                for i in range(layer):
-                                    arch.append(unit)
-                                arch.append(10)
-                                
-                                student = lnn.LinearNeuralNetwork(architecture=arch, seed=student_seed).to(device)
-                                train(student, train_loader, device, comp_model=teacher, flat_data=True, num_epochs=epoch,
-                                        lr=lr, loss_func=dl.DistillationLoss(alpha=alpha, temp=temp))
-                                
-                                torch.save(student, student_save)
-                                
+        model_count = len(hidden_layers) * len(hidden_units) * len(alphas) * len(temps) * len(epochs) * len(learning_rates)
+        cur_model = 0
+
+        for layer in hidden_layers:
+            for unit in hidden_units:
+                for alpha in alphas:
+                    for temp in temps:
+                        for epoch in epochs:
+                            for lr in learning_rates:
+                                cur_model = cur_model + 1
+                                print("Training model {} of {}".format(cur_model, model_count))
+
+                                student_save = "student_layers_{}_units_{}_alpha_{}_temp_{}_epoch_{}_lr_{}".format(layer, unit, alpha, temp, epoch, lr)
+
+                                if os.path.isfile(student_save):
+                                    print("Loading student model: " + student_save)
+                                    student = torch.load(student_save)
+                                else:
+                                    print("Training student model: " + student_save)
+
+                                    arch = []
+                                    arch.append(28*28)
+                                    for i in range(layer):
+                                        arch.append(unit)
+                                    arch.append(10)
+
+                                    student = lnn.LinearNeuralNetwork(architecture=arch, seed=student_seed).to(device)
+                                    train(student, train_loader, device, comp_model=teacher, flat_data=True, num_epochs=epoch,
+                                            lr=lr, loss_func=dl.DistillationLoss(alpha=alpha, temp=temp))
+
+                                    torch.save(student, student_save)
+
                                 student_accuracy = accuracy(student, test_loader, flat_data=True)
+                                max_weight = student.max_weight()
+                                max_bias = student.max_bias()
                                 print("Student accuracy: {}".format(student_accuracy))
-                                print(student.weights())
-                                print(student.biases())
+
+                                results_csv.writerow([student_save, layer, unit, alpha, temp, epoch, lr, student_accuracy, max_weight, max_bias])
+    print("Wrote file: {}".format(results_filename))

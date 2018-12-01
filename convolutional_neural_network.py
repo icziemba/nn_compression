@@ -1,8 +1,12 @@
+import torch
 import torch.nn as nn
 
 class ConvNeuralNetwork(nn.Module):
-    def __init__(self, num_classes=10):
+    def __init__(self, seed=None, num_classes=10):
         super(ConvNeuralNetwork, self).__init__()
+        if seed:
+            torch.manual_seed(seed)
+
         self.layer1 = nn.Sequential(
             nn.Conv2d(1, 16, kernel_size=5, stride=1, padding=2),
             nn.ReLU(),
