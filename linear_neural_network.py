@@ -9,7 +9,7 @@ class LinearNeuralNetwork(nn.Module):
         super(LinearNeuralNetwork, self).__init__()
         
         # Setup the layers
-        tmp = []
+        self.models = []
         for i in range(len(architecture) - 1):
             inputs = architecture[i]
             outputs = architecture[i + 1]
@@ -25,13 +25,25 @@ class LinearNeuralNetwork(nn.Module):
             linear.weight.data = torch.from_numpy(weights).float()
             linear.bias.data = torch.from_numpy(bias).float()
             
-            tmp.append(linear)
+            self.models.append(linear)
         
         # Need to use module list in order to generate parameters
-        self.layers = nn.ModuleList(tmp)
+        self.layers = nn.ModuleList(self.models)
     
     def forward(self, x):
         out = x        
         for i, l in enumerate(self.layers):
             out = l(out)
         return out
+
+    def weights(self):
+        weights = []
+        for model in self.models:
+            weights.append(model.weight)
+        return weights
+
+    def biases(self):
+        biases = []
+        for model in self.models:
+            biases.append(model.bias)
+        return biases

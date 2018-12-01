@@ -7,6 +7,7 @@ import convolutional_neural_network as cnn
 import linear_neural_network as lnn
 import distillation_loss as dl
 import os
+import csv
 
 # Accuracy function
 def prediction_accuracy(predicted, actual):
@@ -103,10 +104,47 @@ if __name__ == "__main__":
     teacher_accuracy = accuracy(teacher, test_loader)
     print("Teacher accuracy: {}".format(teacher_accuracy))
 
-    # Train the student model
-    student = lnn.LinearNeuralNetwork().to(device)
-    train(student, train_loader, device, comp_model=teacher, flat_data=True, loss_func=dl.DistillationLoss(alpha=0.4, temp=1.0))
 
-    # Get the student accuracy
-    student_accuracy = accuracy(student, test_loader, flat_data=True)
-    print("Student accuracy: {}".format(student_accuracy))
+    student_seed = 123456
+
+    # Run student models with different architectures and hyperparameters
+    hidden_layers = [1, 2]
+    hidden_units = [10, 20, 30, 40, 50]
+    alphas = [0.0, 0.2, 0.4, 0.6, 0.8, 1]
+    temps = [1.0, 2.0, 3.0, 4.0, 5.0]
+    epochs = [5, 10]
+    learning_rates = [0.001]
+
+    # TODO: Write results to file
+    results = "student_results.csv"
+
+    for layer in hidden_layers:
+        for unit in hidden_units:
+            for alpha in alphas:
+                for temp in temps:
+                    for epoch in epochs:
+                        for lr in learning_rates:
+                            student_save = "student_layers_{}_units_{}_alpha_{}_temp_{}".format(layer, unit, alpha, temp)
+                            
+                            if os.path.isfile(student_save):
+                                print("Loading student model: " + student_save)
+                                student = torch.load(student_save)
+                            else:
+                                print("Training student model: " + student_save)
+                                
+                                arch = []
+                                arch.append(28*28)
+                                for i in range(layer):
+                                    arch.append(unit)
+                                arch.append(10)
+                                
+                                student = lnn.LinearNeuralNetwork(architecture=arch, seed=student_seed).to(device)
+                                train(student, train_loader, device, comp_model=teacher, flat_data=True, num_epochs=epoch,
+                                        lr=lr, loss_func=dl.DistillationLoss(alpha=alpha, temp=temp))
+                                
+                                torch.save(student, student_save)
+                                
+                                student_accuracy = accuracy(student, test_loader, flat_data=True)
+                                print("Student accuracy: {}".format(student_accuracy))
+                                print(student.weights())
+                                print(student.biases())
