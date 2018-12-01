@@ -115,4 +115,6 @@ dmypy.json
 .pyre/
 
 MNIST/
-teacher_model
+teacher*
+student*
+*.swp
