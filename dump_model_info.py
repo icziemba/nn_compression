@@ -38,3 +38,27 @@ if __name__ == "__main__":
 
     print("Model {}: Max weight {} Min weight {} Max bias {} Min bias{}".format(
         student_save, max_weight_value, min_weight_value, max_bias_value, min_bias_value))
+
+    csv_weights = "student_model_weights.csv"
+    with open(csv_weights, mode="w") as fd:
+        csv = csv.writer(fd, delimiter=',')
+
+
+        for i in range(len(weights)):
+            numpy_weights = weights[i].cpu().detach().numpy()
+            numpy_biases = biases[i].cpu().detach().numpy()
+
+            csv.writerow(["Weights between layer {} and {}".format(i, i + 1)])
+            for row in range(len(numpy_weights)):
+                weight_list = list(numpy_weights[row])
+                csv.writerow(weight_list)
+
+            csv.writerow(["Biases between layer {} and {}".format(i, i + 1)])
+            for row in range(len(numpy_biases)):
+                bias = numpy_biases[row]
+                csv.writerow([bias])
+
+        csv.writerow([""])
+        csv.writerow([""])
+
+    print("Weights file: {}".format(csv_weights))
